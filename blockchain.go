@@ -5,10 +5,10 @@ package spvwallet
 
 import (
 	"fmt"
-	"github.com/btcsuite/btcd/blockchain"
-	"github.com/btcsuite/btcd/chaincfg"
-	"github.com/btcsuite/btcd/chaincfg/chainhash"
-	"github.com/btcsuite/btcd/wire"
+	"github.com/phoreproject/btcd/blockchain"
+	"github.com/phoreproject/btcd/chaincfg"
+	"github.com/phoreproject/btcd/chaincfg/chainhash"
+	"github.com/phoreproject/btcd/wire"
 	"math/big"
 	"sort"
 	"sync"
@@ -59,7 +59,7 @@ func NewBlockchain(filePath string, walletCreationDate time.Time, params *chainc
 	h, err := b.db.Height()
 	if h == 0 || err != nil {
 		log.Info("Initializing headers db with checkpoints")
-		checkpoint := GetCheckpoint(walletCreationDate, params)
+		checkpoint := GetCheckpoint(walletCreationDate)
 		// Put the checkpoint to the db
 		sh := StoredHeader{
 			header:    checkpoint.Header,
@@ -351,7 +351,7 @@ func (b *Blockchain) GetCommonAncestor(bestHeader, prevBestHeader StoredHeader) 
 func (b *Blockchain) Rollback(t time.Time) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
-	checkpoint := GetCheckpoint(b.crationDate, b.params)
+	checkpoint := GetCheckpoint(b.crationDate)
 	checkPointHash := checkpoint.Header.BlockHash()
 	sh, err := b.db.GetBestHeader()
 	if err != nil {

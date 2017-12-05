@@ -1,9 +1,8 @@
 package spvwallet
 
 import (
-	"github.com/btcsuite/btcd/chaincfg"
-	"github.com/btcsuite/btcd/chaincfg/chainhash"
-	"github.com/btcsuite/btcd/wire"
+	"github.com/phoreproject/btcd/chaincfg/chainhash"
+	"github.com/phoreproject/btcd/wire"
 	"time"
 )
 
@@ -51,47 +50,13 @@ func init() {
 	if mainnetCheckpoints[1].Header.BlockHash().String() != "0000000000000000008e5d72027ef42ca050a0776b7184c96d0d4b300fa5da9e" {
 		panic("Invalid checkpoint")
 	}
-
-	// Testnet3
-	testnet3Prev, _ := chainhash.NewHashFromStr("0000000000001e8cdb2d98471a5c60bdbddbe644b9ad08e17a97b3a7dce1e332")
-	testnet3Merk, _ := chainhash.NewHashFromStr("f675c565b293be2ad808b01b0a763557c8874e4aefe7f2eea0dab91b1f60ec45")
-	testnet3Checkpoints = append(testnet3Checkpoints, Checkpoint{
-		Height: 1151136,
-		Header: wire.BlockHeader{
-			Version:    536870912,
-			PrevBlock:  *testnet3Prev,
-			MerkleRoot: *testnet3Merk,
-			Timestamp:  time.Unix(1498950206, 0),
-			Bits:       436724869,
-			Nonce:      2247874206,
-		},
-	})
-	if testnet3Checkpoints[0].Header.BlockHash().String() != "00000000000002c04de174cf25c993b4dd221eb087c0601a599ff1977e230c99" {
-		panic("Invalid checkpoint")
-	}
-
-	// Regtest
-	regtestCheckpoint = Checkpoint{0, chaincfg.RegressionNetParams.GenesisBlock.Header}
 }
 
-func GetCheckpoint(walletCreationDate time.Time, params *chaincfg.Params) Checkpoint {
-	switch params.Name {
-	case chaincfg.MainNetParams.Name:
-		for i := len(mainnetCheckpoints) - 1; i >= 0; i-- {
-			if walletCreationDate.After(mainnetCheckpoints[i].Header.Timestamp) {
-				return mainnetCheckpoints[i]
-			}
+func GetCheckpoint(walletCreationDate time.Time) Checkpoint {
+	for i := len(mainnetCheckpoints) - 1; i >= 0; i-- {
+		if walletCreationDate.After(mainnetCheckpoints[i].Header.Timestamp) {
+			return mainnetCheckpoints[i]
 		}
-		return mainnetCheckpoints[0]
-	case chaincfg.TestNet3Params.Name:
-		for i := len(testnet3Checkpoints) - 1; i >= 0; i-- {
-			if walletCreationDate.After(testnet3Checkpoints[i].Header.Timestamp) {
-				return testnet3Checkpoints[i]
-			}
-		}
-		return testnet3Checkpoints[0]
-
-	default:
-		return regtestCheckpoint
 	}
+	return mainnetCheckpoints[0]
 }

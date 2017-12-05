@@ -1,10 +1,10 @@
 package spvwallet
 
 import (
-	"github.com/OpenBazaar/wallet-interface"
-	"github.com/btcsuite/btcd/chaincfg"
-	hd "github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/btcsuite/goleveldb/leveldb/errors"
+	"github.com/phoreproject/btcd/chaincfg"
+	hd "github.com/phoreproject/btcutil/hdkeychain"
+	"github.com/phoreproject/wallet-interface"
 )
 
 const LOOKAHEADWINDOW = 100

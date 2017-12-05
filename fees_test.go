@@ -2,7 +2,7 @@ package spvwallet
 
 import (
 	"bytes"
-	"github.com/OpenBazaar/wallet-interface"
+	"github.com/phoreproject/wallet-interface"
 	"net/http"
 	"testing"
 )
