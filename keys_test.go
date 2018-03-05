@@ -3,13 +3,14 @@ package spvwallet
 import (
 	"bytes"
 	"encoding/hex"
-	"github.com/phoreproject/wallet-interface"
+	"testing"
+
 	"github.com/phoreproject/btcd/btcec"
 	"github.com/phoreproject/btcd/chaincfg"
 	"github.com/phoreproject/btcd/txscript"
 	"github.com/phoreproject/btcutil"
 	"github.com/phoreproject/btcutil/hdkeychain"
-	"testing"
+	"github.com/phoreproject/wallet-interface"
 )
 
 func createKeyManager() (*KeyManager, error) {
@@ -73,7 +74,7 @@ func TestKeys_generateChildKey(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	internalKey, err := km.generateChildKey(wallet.INTERNAL, 0)
+	internalKey, err := km.GenerateChildKey(wallet.INTERNAL, 0)
 	internalAddr, err := internalKey.Address(&chaincfg.MainNetParams)
 	if err != nil {
 		t.Error(err)
@@ -81,7 +82,7 @@ func TestKeys_generateChildKey(t *testing.T) {
 	if internalAddr.String() != "16wbbYdecq9QzXdxa58q2dYXJRc8sfkE4J" {
 		t.Error("generateChildKey returned incorrect key")
 	}
-	externalKey, err := km.generateChildKey(wallet.EXTERNAL, 0)
+	externalKey, err := km.GenerateChildKey(wallet.EXTERNAL, 0)
 	externalAddr, err := externalKey.Address(&chaincfg.MainNetParams)
 	if err != nil {
 		t.Error(err)
@@ -135,7 +136,7 @@ func TestKeyManager_MarkKeyAsUsed(t *testing.T) {
 	if len(i) == 0 {
 		t.Error("No unused keys in database")
 	}
-	key, err := km.generateChildKey(wallet.EXTERNAL, uint32(i[0]))
+	key, err := km.GenerateChildKey(wallet.EXTERNAL, uint32(i[0]))
 	if err != nil {
 		t.Error(err)
 	}
@@ -203,7 +204,7 @@ func TestKeyManager_GetFreshKey(t *testing.T) {
 	if len(km.GetKeys()) != LOOKAHEADWINDOW*2+1 {
 		t.Error("Failed to create additional key")
 	}
-	key2, err := km.generateChildKey(wallet.EXTERNAL, 100)
+	key2, err := km.GenerateChildKey(wallet.EXTERNAL, 100)
 	if err != nil {
 		t.Error(err)
 	}

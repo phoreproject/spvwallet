@@ -2,6 +2,10 @@ package spvwallet
 
 import (
 	"errors"
+	"io"
+	"sync"
+	"time"
+
 	"github.com/op/go-logging"
 	"github.com/phoreproject/btcd/btcec"
 	"github.com/phoreproject/btcd/chaincfg"
@@ -13,9 +17,6 @@ import (
 	"github.com/phoreproject/btcwallet/wallet/txrules"
 	"github.com/phoreproject/wallet-interface"
 	b39 "github.com/tyler-smith/go-bip39"
-	"io"
-	"sync"
-	"time"
 )
 
 type SPVWallet struct {
@@ -203,7 +204,7 @@ func (w *SPVWallet) CurrentAddress(purpose wallet.KeyPurpose) btc.Address {
 
 func (w *SPVWallet) NewAddress(purpose wallet.KeyPurpose) btc.Address {
 	i, _ := w.txstore.Keys().GetUnused(purpose)
-	key, _ := w.keyManager.generateChildKey(purpose, uint32(i[1]))
+	key, _ := w.keyManager.GenerateChildKey(purpose, uint32(i[1]))
 	addr, _ := key.Address(w.params)
 	w.txstore.Keys().MarkKeyAsUsed(addr.ScriptAddress())
 	w.txstore.PopulateAdrs()
