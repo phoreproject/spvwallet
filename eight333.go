@@ -1,10 +1,12 @@
 package spvwallet
 
 import (
+	"bytes"
+	"time"
+
 	"github.com/phoreproject/btcd/chaincfg/chainhash"
 	"github.com/phoreproject/btcd/peer"
 	"github.com/phoreproject/btcd/wire"
-	"time"
 )
 
 var (
@@ -187,9 +189,14 @@ func (w *SPVWallet) onGetData(p *peer.Peer, m *wire.MsgGetData) {
 	var sent int32
 	for _, thing := range m.InvList {
 		if thing.Type == wire.InvTypeTx {
-			tx, _, err := w.txstore.Txns().Get(thing.Hash)
+			txn, err := w.txstore.Txns().Get(thing.Hash)
 			if err != nil {
 				log.Errorf("Error getting tx %s: %s", thing.Hash.String(), err.Error())
+				continue
+			}
+			tx := wire.NewMsgTx(1)
+			if err := tx.BtcDecode(bytes.NewReader(txn.Bytes), wire.ProtocolVersion, wire.WitnessEncoding); err != nil {
+				log.Errorf("Error decoding tx %s: %s", thing.Hash.String(), err.Error())
 				continue
 			}
 			p.QueueMessageWithEncoding(tx, nil, wire.WitnessEncoding)

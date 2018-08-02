@@ -6,7 +6,9 @@ package spvwallet
 import (
 	"bytes"
 	"errors"
-	"github.com/phoreproject/wallet-interface"
+	"sync"
+	"time"
+
 	"github.com/phoreproject/btcd/blockchain"
 	"github.com/phoreproject/btcd/chaincfg"
 	"github.com/phoreproject/btcd/chaincfg/chainhash"
@@ -14,8 +16,7 @@ import (
 	"github.com/phoreproject/btcd/wire"
 	"github.com/phoreproject/btcutil"
 	"github.com/phoreproject/btcutil/bloom"
-	"sync"
-	"time"
+	"github.com/phoreproject/wallet-interface"
 )
 
 type TxStore struct {
@@ -238,7 +239,7 @@ func (ts *TxStore) Ingest(tx *wire.MsgTx, height int32) (uint32, error) {
 
 	// Iterate through all outputs of this tx, see if we gain
 	cachedSha := tx.TxHash()
-	cb := wallet.TransactionCallback{Txid: cachedSha.CloneBytes(), Height: height}
+	cb := wallet.TransactionCallback{Txid: cachedSha.String(), Height: height}
 	value := int64(0)
 	matchesWatchOnly := false
 	for i, txout := range tx.TxOut {
@@ -341,19 +342,21 @@ func (ts *TxStore) Ingest(tx *wire.MsgTx, height int32) (uint32, error) {
 	// If hits is nonzero it's a relevant tx and we should store it
 	if hits > 0 || matchesWatchOnly {
 		ts.cbMutex.Lock()
-		_, txn, err := ts.Txns().Get(tx.TxHash())
+		txn, err := ts.Txns().Get(tx.TxHash())
 		shouldCallback := false
 		if err != nil {
 			cb.Value = value
 			txn.Timestamp = time.Now()
 			shouldCallback = true
-			ts.Txns().Put(tx, int(value), int(height), txn.Timestamp, hits == 0)
+			var buf bytes.Buffer
+			tx.BtcEncode(&buf, wire.ProtocolVersion, wire.WitnessEncoding)
+			ts.Txns().Put(buf.Bytes(), tx.TxHash().String(), int(value), int(height), txn.Timestamp, hits == 0)
 			ts.txids[tx.TxHash().String()] = height
 		}
 		// Let's check the height before committing so we don't allow rogue peers to send us a lose
 		// tx that resets our height to zero.
 		if txn.Height <= 0 {
-			ts.Txns().UpdateHeight(tx.TxHash(), int(height))
+			ts.Txns().UpdateHeight(tx.TxHash(), int(height), txn.Timestamp)
 			ts.txids[tx.TxHash().String()] = height
 			if height > 0 {
 				cb.Value = txn.Value
@@ -383,7 +386,7 @@ func (ts *TxStore) markAsDead(txid chainhash.Hash) error {
 		if err != nil {
 			return err
 		}
-		err = ts.Txns().UpdateHeight(s.SpendTxid, -1)
+		err = ts.Txns().UpdateHeight(s.SpendTxid, -1, time.Now())
 		if err != nil {
 			return err
 		}
@@ -422,7 +425,7 @@ func (ts *TxStore) markAsDead(txid chainhash.Hash) error {
 			}
 		}
 	}
-	ts.Txns().UpdateHeight(txid, -1)
+	ts.Txns().UpdateHeight(txid, -1, time.Now())
 	return nil
 }
 
