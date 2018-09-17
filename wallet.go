@@ -187,6 +187,25 @@ func (w *SPVWallet) MasterPublicKey() *hd.ExtendedKey {
 	return w.masterPublicKey
 }
 
+func (w *SPVWallet) ChildKey(keyBytes []byte, chaincode []byte, isPrivateKey bool) (*hd.ExtendedKey, error) {
+	parentFP := []byte{0x00, 0x00, 0x00, 0x00}
+	var id []byte
+	if isPrivateKey {
+		id = w.params.HDPrivateKeyID[:]
+	} else {
+		id = w.params.HDPublicKeyID[:]
+	}
+	hdKey := hd.NewExtendedKey(
+		id,
+		keyBytes,
+		chaincode,
+		parentFP,
+		0,
+		0,
+		isPrivateKey)
+	return hdKey.Child(0)
+}
+
 func (w *SPVWallet) Mnemonic() string {
 	return w.mnemonic
 }
@@ -215,12 +234,16 @@ func (w *SPVWallet) DecodeAddress(addr string) (btc.Address, error) {
 }
 
 func (w *SPVWallet) ScriptToAddress(script []byte) (btc.Address, error) {
-	_, addrs, _, err := txscript.ExtractPkScriptAddrs(script, w.params)
+	return scriptToAddress(script, w.params)
+}
+
+func scriptToAddress(script []byte, params *chaincfg.Params) (btc.Address, error) {
+	_, addrs, _, err := txscript.ExtractPkScriptAddrs(script, params)
 	if err != nil {
-		return nil, err
+		return &btc.AddressPubKeyHash{}, err
 	}
 	if len(addrs) == 0 {
-		return nil, errors.New("unknown script")
+		return &btc.AddressPubKeyHash{}, errors.New("unknown script")
 	}
 	return addrs[0], nil
 }
@@ -291,7 +314,37 @@ func (w *SPVWallet) Balance() (confirmed, unconfirmed int64) {
 }
 
 func (w *SPVWallet) Transactions() ([]wallet.Txn, error) {
-	return w.txstore.Txns().GetAll(false)
+	height, _ := w.ChainTip()
+	txns, err := w.txstore.Txns().GetAll(false)
+	if err != nil {
+		return txns, err
+	}
+	for i, tx := range txns {
+		var confirmations int32
+		var status wallet.StatusCode
+		confs := int32(height) - tx.Height + 1
+		if tx.Height <= 0 {
+			confs = tx.Height
+		}
+		switch {
+		case confs < 0:
+			status = wallet.StatusDead
+		case confs == 0 && time.Since(tx.Timestamp) <= time.Hour*6:
+			status = wallet.StatusUnconfirmed
+		case confs == 0 && time.Since(tx.Timestamp) > time.Hour*6:
+			status = wallet.StatusDead
+		case confs > 0 && confs < 6:
+			status = wallet.StatusPending
+			confirmations = confs
+		case confs > 5:
+			status = wallet.StatusConfirmed
+			confirmations = confs
+		}
+		tx.Confirmations = int64(confirmations)
+		tx.Status = status
+		txns[i] = tx
+	}
+	return txns, nil
 }
 
 func (w *SPVWallet) GetTransaction(txid chainhash.Hash) (wallet.Txn, error) {
@@ -349,8 +402,12 @@ func (w *SPVWallet) ChainTip() (uint32, chainhash.Hash) {
 	return sh.height, sh.header.BlockHash()
 }
 
-func (w *SPVWallet) AddWatchedScript(script []byte) error {
-	err := w.txstore.WatchedScripts().Put(script)
+func (w *SPVWallet) AddWatchedAddress(addr btc.Address) error {
+	script, err := w.AddressToScript(addr)
+	if err != nil {
+		return err
+	}
+	err = w.txstore.WatchedScripts().Put(script)
 	w.txstore.PopulateAdrs()
 
 	w.wireService.MsgChan() <- updateFiltersMsg{}
@@ -372,15 +429,7 @@ func (w *SPVWallet) Close() {
 }
 
 func (w *SPVWallet) ReSyncBlockchain(fromDate time.Time) {
-	w.peerManager.Stop()
-	w.wireService.Stop()
 	w.blockchain.Rollback(fromDate)
 	w.txstore.PopulateAdrs()
-	var err error
-	w.peerManager, err = NewPeerManager(w.config)
-	if err != nil {
-		return
-	}
-	go w.wireService.Start()
-	go w.peerManager.Start()
+	w.wireService.Resync()
 }
