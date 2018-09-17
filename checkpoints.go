@@ -52,11 +52,28 @@ func init() {
 	}
 }
 
-func GetCheckpoint(walletCreationDate time.Time) Checkpoint {
-	for i := len(mainnetCheckpoints) - 1; i >= 0; i-- {
-		if walletCreationDate.After(mainnetCheckpoints[i].Header.Timestamp) {
-			return mainnetCheckpoints[i]
+	// Regtest
+	regtestCheckpoint = Checkpoint{0, chaincfg.RegressionNetParams.GenesisBlock.Header}
+}
+
+func GetCheckpoint(walletCreationDate time.Time, params *chaincfg.Params) Checkpoint {
+	switch params.Name {
+	case chaincfg.MainNetParams.Name:
+		for i := len(mainnetCheckpoints) - 1; i >= 0; i-- {
+			if walletCreationDate.After(mainnetCheckpoints[i].Header.Timestamp) {
+				return mainnetCheckpoints[i]
+			}
 		}
+		return mainnetCheckpoints[0]
+	case chaincfg.TestNet3Params.Name:
+		for i := len(testnet3Checkpoints) - 1; i >= 0; i-- {
+			if walletCreationDate.After(testnet3Checkpoints[i].Header.Timestamp) {
+				return testnet3Checkpoints[i]
+			}
+		}
+		return testnet3Checkpoints[0]
+
+	default:
+		return regtestCheckpoint
 	}
-	return mainnetCheckpoints[0]
 }
