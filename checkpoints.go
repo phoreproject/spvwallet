@@ -1,6 +1,7 @@
 package spvwallet
 
 import (
+	"github.com/phoreproject/btcd/chaincfg"
 	"github.com/phoreproject/btcd/chaincfg/chainhash"
 	"github.com/phoreproject/btcd/wire"
 	"time"
@@ -12,8 +13,6 @@ type Checkpoint struct {
 }
 
 var mainnetCheckpoints []Checkpoint
-var testnet3Checkpoints []Checkpoint
-var regtestCheckpoint Checkpoint
 
 func init() {
 	// Mainnet
@@ -54,23 +53,10 @@ func init() {
 
 
 func GetCheckpoint(walletCreationDate time.Time, params *chaincfg.Params) Checkpoint {
-	switch params.Name {
-	case chaincfg.MainNetParams.Name:
-		for i := len(mainnetCheckpoints) - 1; i >= 0; i-- {
-			if walletCreationDate.After(mainnetCheckpoints[i].Header.Timestamp) {
-				return mainnetCheckpoints[i]
-			}
+	for i := len(mainnetCheckpoints) - 1; i >= 0; i-- {
+		if walletCreationDate.After(mainnetCheckpoints[i].Header.Timestamp) {
+			return mainnetCheckpoints[i]
 		}
-		return mainnetCheckpoints[0]
-	case chaincfg.TestNet3Params.Name:
-		for i := len(testnet3Checkpoints) - 1; i >= 0; i-- {
-			if walletCreationDate.After(testnet3Checkpoints[i].Header.Timestamp) {
-				return testnet3Checkpoints[i]
-			}
-		}
-		return testnet3Checkpoints[0]
-
-	default:
-		return regtestCheckpoint
 	}
+	return mainnetCheckpoints[0]
 }
