@@ -52,9 +52,6 @@ func init() {
 	}
 }
 
-	// Regtest
-	regtestCheckpoint = Checkpoint{0, chaincfg.RegressionNetParams.GenesisBlock.Header}
-}
 
 func GetCheckpoint(walletCreationDate time.Time, params *chaincfg.Params) Checkpoint {
 	switch params.Name {
