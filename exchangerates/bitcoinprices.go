@@ -5,8 +5,6 @@ import (
 	"errors"
 	"net"
 	"net/http"
-	"reflect"
-	"strconv"
 	"sync"
 	"time"
 
@@ -56,7 +54,6 @@ func NewBitcoinPriceFetcher(dialer proxy.Dialer) *BitcoinPriceFetcher {
 
 	b.providers = []*ExchangeRateProvider{
 		{"https://api.coinmarketcap.com/v2/ticker/2158/?convert=", b.cache, client, CMCDecoder{}},
-
 	}
 	go b.run()
 	return &b
