@@ -16,37 +16,22 @@ var mainnetCheckpoints []Checkpoint
 
 func init() {
 	// Mainnet
-	mainnetPrev, _ := chainhash.NewHashFromStr("000000000000000001389446206ebcd378c32cd00b4920a8a1ba7b540ca7d699")
-	mainnetMerk, _ := chainhash.NewHashFromStr("ddc4fede55aeebe6e3bfd3292145b011a4f16ead187ed90d7df0fd4c020b6ab6")
+	mainnetPrev, _ := chainhash.NewHashFromStr("66aa54b9a85e32c3d466fe38cbd40553120a32e15f99b107e31c20a6f56882e7")
+	mainnetMerk, _ := chainhash.NewHashFromStr("5f19fc2b20e25c9ebdc373fd7b4fe49d164b0d139f1121e603f956a1ae8d0b28")
+	mainnetAccCheckpoint, _ := chainhash.NewHashFromStr("ec405dc73cd67b7dc1d907164cdfed07a9d304f57862d016d6863ecd9f7e812c")
 	mainnetCheckpoints = append(mainnetCheckpoints, Checkpoint{
-		Height: 473760,
+		Height: 400000,
 		Header: wire.BlockHeader{
-			Version:    536870914,
+			Version:    4,
 			PrevBlock:  *mainnetPrev,
 			MerkleRoot: *mainnetMerk,
-			Timestamp:  time.Unix(1498956437, 0),
-			Bits:       402754864,
-			Nonce:      134883004,
+			Timestamp:  time.Unix(1529796056, 0),
+			Bits:       453089485,
+			Nonce:      0,
+			AccumulatorCheckpoint: *mainnetAccCheckpoint,
 		},
 	})
-	if mainnetCheckpoints[0].Header.BlockHash().String() != "000000000000000000802ba879f1b7a638dcea6ff0ceb614d91afc8683ac0502" {
-		panic("Invalid checkpoint")
-	}
-
-	mainnetPrev1, _ := chainhash.NewHashFromStr("000000000000000000d0ad638ad61e7c4c3113618b8b26b2044347c00c042278")
-	mainnetMerk1, _ := chainhash.NewHashFromStr("87b940030e48d97625b923c3ebc0626c2cb1123b78135380306eb6dcfd50703c")
-	mainnetCheckpoints = append(mainnetCheckpoints, Checkpoint{
-		Height: 483840,
-		Header: wire.BlockHeader{
-			Version:    536870912,
-			PrevBlock:  *mainnetPrev1,
-			MerkleRoot: *mainnetMerk1,
-			Timestamp:  time.Unix(1504704195, 0),
-			Bits:       402731275,
-			Nonce:      1775134070,
-		},
-	})
-	if mainnetCheckpoints[1].Header.BlockHash().String() != "0000000000000000008e5d72027ef42ca050a0776b7184c96d0d4b300fa5da9e" {
+	if mainnetCheckpoints[0].Header.BlockHash().String() != "9491894ab30da4bae4e8a2ca9547f2f6a01ac29fc4006342cc690fd61dbe55b3" {
 		panic("Invalid checkpoint")
 	}
 }
