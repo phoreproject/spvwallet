@@ -53,7 +53,7 @@ func NewBitcoinPriceFetcher(dialer proxy.Dialer) *BitcoinPriceFetcher {
 	client := &http.Client{Transport: tbTransport, Timeout: time.Minute}
 
 	b.providers = []*ExchangeRateProvider{
-		{"https://api.coinmarketcap.com/v2/ticker/2158/?convert=", b.cache, client, CMCDecoder{}},
+		{"https://api.coinmarketcap.com/v2/ticker/2158/?convert=BTC", b.cache, client, CMCDecoder{}},
 	}
 	go b.run()
 	return &b
@@ -143,30 +143,41 @@ func (b *BitcoinPriceFetcher) run() {
 
 // Decoders
 func (b CMCDecoder) decode(dat interface{}, cache map[string]float64) (err error) {
-	currencyInfo, ok := dat.([]interface{})
+	currencyInfo, ok := dat.(map[string]interface{})
 	if !ok {
 		return errors.New("coinmarketcap returned malformed information")
 	}
-	for _, v := range currencyInfo {
 
-		priceData, found := v.(map[string]interface{})["data"]
-		if !found {
-			return errors.New("coinmarketcap returned incorrect information")
-		}
-		priceQuotes, found := priceData.(map[string]interface{})["quotes"].(map[string]interface{})
-		if !found {
-			return errors.New("coinmarketcap did not return quotes")
-		}
-		for currency, price := range priceQuotes {
-			priceAmount, found := price.(map[string]interface{})["price"].(float64)
-			if !found {
-				return errors.New("coinmarketcap did not return pricedata for " + currency)
-			}
-			cache[currency] = priceAmount
-		}
+	metadata, found := currencyInfo["metadata"].(map[string]interface{})
+	if !found {
+		return errors.New("coinmarketcap did not return metadata")
 	}
+
+	error, found := metadata["error"].(interface{})
+	if found && error != nil {
+		return errors.New("coinmarketcap returned error: " + error.(string))
+	}
+
+	data, found := currencyInfo["data"].(map[string]interface{})
+	if !found {
+		return errors.New("coinmarketcap did not return data")
+	}
+
+	priceQuotes, found := data["quotes"].(map[string]interface{})
+	if !found {
+		return errors.New("coinmarketcap did not return quotes")
+	}
+	for currency, price := range priceQuotes {
+		priceAmount, found := price.(map[string]interface{})["price"].(float64)
+		if !found {
+			return errors.New("coinmarketcap did not return pricedata for " + currency)
+		}
+		cache[currency] = priceAmount
+	}
+
 	return nil
 }
+
 
 // NormalizeCurrencyCode standardizes the format for the given currency code
 func NormalizeCurrencyCode(currencyCode string) string {
