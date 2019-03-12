@@ -30,6 +30,7 @@ type ExchangeRateDecoder interface {
 
 // empty structs to tag the different ExchangeRateDecoder implementations
 type CMCDecoder struct{}
+type CoinGeckoDecoder struct {}
 type BitcoinAverageDecoder struct{}
 type BitPayDecoder struct{}
 type BlockchainInfoDecoder struct{}
@@ -54,6 +55,7 @@ func NewBitcoinPriceFetcher(dialer proxy.Dialer) *BitcoinPriceFetcher {
 
 	b.providers = []*ExchangeRateProvider{
 		{"https://api.coinmarketcap.com/v2/ticker/2158/?convert=BTC", b.cache, client, CMCDecoder{}},
+		{"https://api.coingecko.com/api/v3/coins/phore?tickers=false&community_data=false&developer_data=false&sparkline=false",b.cache, client, CoinGeckoDecoder{}},
 	}
 	go b.run()
 	return &b
@@ -175,6 +177,31 @@ func (b CMCDecoder) decode(dat interface{}, cache map[string]float64) (err error
 		cache[currency] = priceAmount
 	}
 
+	return nil
+}
+
+func (b CoinGeckoDecoder) decode(dat interface{}, cache map[string]float64) (err error) {
+	currencyInfo, ok := dat.(map[string]interface{})
+	if !ok {
+		return errors.New("coin gecko returned malformed information")
+	}
+
+	marketData, found := currencyInfo["market_data"].(map[string]interface{})
+	if !found {
+		return errors.New("coin gecko did not return market data")
+	}
+
+	currentPrice, found := marketData["current_price"].(map[string]interface{})
+	if !found {
+		return errors.New("coin gecko did not return current price in market data")
+	}
+
+	for currency, price := range currentPrice {
+		if !found {
+			return errors.New("coin gecko did not return pricedata for " + currency)
+		}
+		cache[strings.ToUpper(currency)] = price.(float64)
+	}
 	return nil
 }
 
