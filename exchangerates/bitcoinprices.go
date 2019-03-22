@@ -54,8 +54,8 @@ func NewBitcoinPriceFetcher(dialer proxy.Dialer) *BitcoinPriceFetcher {
 	client := &http.Client{Transport: tbTransport, Timeout: time.Minute}
 
 	b.providers = []*ExchangeRateProvider{
-		{"https://api.coinmarketcap.com/v2/ticker/2158/?convert=BTC", b.cache, client, CMCDecoder{}},
 		{"https://api.coingecko.com/api/v3/coins/phore?tickers=false&community_data=false&developer_data=false&sparkline=false",b.cache, client, CoinGeckoDecoder{}},
+		{"https://api.coinmarketcap.com/v2/ticker/2158/?convert=BTC", b.cache, client, CMCDecoder{}},
 	}
 	go b.run()
 	return &b
