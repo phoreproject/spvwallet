@@ -26,26 +26,16 @@ import (
 )
 
 func (s *SPVWallet) Broadcast(tx *wire.MsgTx) error {
-
 	// Our own tx; don't keep track of false positives
-	_, err := s.txstore.Ingest(tx, 0)
-	if err != nil {
-		return err
-	}
-
-	// make an inv message instead of a tx message to be polite
-	txid := tx.TxHash()
-	iv1 := wire.NewInvVect(wire.InvTypeTx, &txid)
-	invMsg := wire.NewMsgInv()
-	err = invMsg.AddInvVect(iv1)
+	_, err := s.txstore.Ingest(tx, 0, time.Now())
 	if err != nil {
 		return err
 	}
 
 	log.Debugf("Broadcasting tx %s to peers", tx.TxHash().String())
-	for _, peer := range s.peerManager.ReadyPeers() {
-		peer.QueueMessage(invMsg, nil)
-		s.updateFilterAndSend(peer)
+	s.wireService.MsgChan() <- updateFiltersMsg{}
+	for _, peer := range s.peerManager.ConnectedPeers() {
+		peer.QueueMessageWithEncoding(tx, nil, wire.WitnessEncoding)
 	}
 	return nil
 }
@@ -196,7 +186,17 @@ func (w *SPVWallet) BumpFee(txid chainhash.Hash) (*chainhash.Hash, error) {
 			if err != nil {
 				return nil, err
 			}
-			transactionID, err := w.SweepAddress([]wallet.Utxo{u}, nil, key, nil, wallet.FEE_BUMP)
+			h, err := hex.DecodeString(u.Op.Hash.String())
+			if err != nil {
+				return nil, err
+			}
+			in := wallet.TransactionInput{
+				LinkedAddress: addr,
+				OutpointIndex: u.Op.Index,
+				OutpointHash:  h,
+				Value:         u.Value,
+			}
+			transactionID, err := w.SweepAddress([]wallet.TransactionInput{in}, nil, key, nil, wallet.FEE_BUMP)
 			if err != nil {
 				return nil, err
 			}
@@ -209,7 +209,8 @@ func (w *SPVWallet) BumpFee(txid chainhash.Hash) (*chainhash.Hash, error) {
 func (w *SPVWallet) EstimateFee(ins []wallet.TransactionInput, outs []wallet.TransactionOutput, feePerByte uint64) uint64 {
 	tx := new(wire.MsgTx)
 	for _, out := range outs {
-		output := wire.NewTxOut(out.Value, out.ScriptPubKey)
+		scriptPubKey, _ := txscript.PayToAddrScript(out.Address)
+		output := wire.NewTxOut(out.Value, scriptPubKey)
 		tx.TxOut = append(tx.TxOut, output)
 	}
 	estimatedSize := EstimateSerializeSize(len(ins), tx.TxOut, false, P2PKH)
@@ -329,7 +330,11 @@ func (w *SPVWallet) CreateMultisigSignature(ins []wallet.TransactionInput, outs 
 		tx.TxIn = append(tx.TxIn, input)
 	}
 	for _, out := range outs {
-		output := wire.NewTxOut(out.Value, out.ScriptPubKey)
+		scriptPubKey, err := txscript.PayToAddrScript(out.Address)
+		if err != nil {
+			return sigs, err
+		}
+		output := wire.NewTxOut(out.Value, scriptPubKey)
 		tx.TxOut = append(tx.TxOut, output)
 	}
 
@@ -380,7 +385,11 @@ func (w *SPVWallet) Multisign(ins []wallet.TransactionInput, outs []wallet.Trans
 		tx.TxIn = append(tx.TxIn, input)
 	}
 	for _, out := range outs {
-		output := wire.NewTxOut(out.Value, out.ScriptPubKey)
+		scriptPubKey, err := txscript.PayToAddrScript(out.Address)
+		if err != nil {
+			return nil, err
+		}
+		output := wire.NewTxOut(out.Value, scriptPubKey)
 		tx.TxOut = append(tx.TxOut, output)
 	}
 
@@ -441,7 +450,7 @@ func (w *SPVWallet) Multisign(ins []wallet.TransactionInput, outs []wallet.Trans
 	return buf.Bytes(), nil
 }
 
-func (w *SPVWallet) SweepAddress(utxos []wallet.Utxo, address *btc.Address, key *hd.ExtendedKey, redeemScript *[]byte, feeLevel wallet.FeeLevel) (*chainhash.Hash, error) {
+func (w *SPVWallet) SweepAddress(ins []wallet.TransactionInput, address *btc.Address, key *hd.ExtendedKey, redeemScript *[]byte, feeLevel wallet.FeeLevel) (*chainhash.Hash, error) {
 	var internalAddr btc.Address
 	if address != nil {
 		internalAddr = *address
@@ -456,11 +465,20 @@ func (w *SPVWallet) SweepAddress(utxos []wallet.Utxo, address *btc.Address, key 
 	var val int64
 	var inputs []*wire.TxIn
 	additionalPrevScripts := make(map[wire.OutPoint][]byte)
-	for _, u := range utxos {
-		val += u.Value
-		in := wire.NewTxIn(&u.Op, []byte{}, [][]byte{})
-		inputs = append(inputs, in)
-		additionalPrevScripts[u.Op] = u.ScriptPubkey
+	for _, in := range ins {
+		val += in.Value
+		ch, err := chainhash.NewHashFromStr(hex.EncodeToString(in.OutpointHash))
+		if err != nil {
+			return nil, err
+		}
+		script, err := txscript.PayToAddrScript(in.LinkedAddress)
+		if err != nil {
+			return nil, err
+		}
+		outpoint := wire.NewOutPoint(ch, in.OutpointIndex)
+		input := wire.NewTxIn(outpoint, []byte{}, [][]byte{})
+		inputs = append(inputs, input)
+		additionalPrevScripts[*outpoint] = script
 	}
 	out := wire.NewTxOut(val, script)
 
@@ -472,7 +490,7 @@ func (w *SPVWallet) SweepAddress(utxos []wallet.Utxo, address *btc.Address, key 
 			txType = P2SH_Multisig_Timelock_1Sig
 		}
 	}
-	estimatedSize := EstimateSerializeSize(len(utxos), []*wire.TxOut{out}, false, txType)
+	estimatedSize := EstimateSerializeSize(len(ins), []*wire.TxOut{out}, false, txType)
 
 	// Calculate the fee
 	feePerByte := int(w.GetFeePerByte(feeLevel))
@@ -548,7 +566,7 @@ func (w *SPVWallet) SweepAddress(utxos []wallet.Utxo, address *btc.Address, key 
 			}
 			txIn.SignatureScript = script
 		} else {
-			sig, err := txscript.RawTxInWitnessSignature(tx, hashes, i, utxos[i].Value, *redeemScript, txscript.SigHashAll, privKey)
+			sig, err := txscript.RawTxInWitnessSignature(tx, hashes, i, ins[i].Value, *redeemScript, txscript.SigHashAll, privKey)
 			if err != nil {
 				return nil, err
 			}
@@ -585,11 +603,12 @@ func (w *SPVWallet) buildTx(amount int64, addr btc.Address, feeLevel wallet.FeeL
 	for k := range coinMap {
 		coins = append(coins, k)
 	}
-	inputSource := func(target btc.Amount) (total btc.Amount, inputs []*wire.TxIn, scripts [][]byte, err error) {
-		coinSelector := coinset.MaxValueAgeCoinSelector{MaxInputs: 10000, MinChangeAmount: btc.Amount(10000)}
+
+	inputSource := func(target btc.Amount) (total btc.Amount, inputs []*wire.TxIn, inputValues []btc.Amount, scripts [][]byte, err error) {
+		coinSelector := coinset.MaxValueAgeCoinSelector{MaxInputs: 10000, MinChangeAmount: btc.Amount(0)}
 		coins, err := coinSelector.CoinSelect(target, coins)
 		if err != nil {
-			return total, inputs, scripts, wallet.ErrorInsuffientFunds
+			return total, inputs, []btc.Amount{}, scripts, wallet.ErrorInsuffientFunds
 		}
 		additionalPrevScripts = make(map[wire.OutPoint][]byte)
 		additionalKeysByAddress = make(map[string]*btc.WIF)
@@ -612,7 +631,7 @@ func (w *SPVWallet) buildTx(amount int64, addr btc.Address, feeLevel wallet.FeeL
 			wif, _ := btc.NewWIF(privKey, w.params, true)
 			additionalKeysByAddress[addr.EncodeAddress()] = wif
 		}
-		return total, inputs, scripts, nil
+		return total, inputs, []btc.Amount{}, scripts, nil
 	}
 
 	// Get the fee per kilobyte
@@ -677,7 +696,7 @@ func NewUnsignedTransaction(outputs []*wire.TxOut, feePerKb btc.Amount, fetchInp
 	targetFee := txrules.FeeForSerializeSize(feePerKb, estimatedSize)
 
 	for {
-		inputAmount, inputs, scripts, err := fetchInputs(targetAmount + targetFee)
+		inputAmount, inputs, _, scripts, err := fetchInputs(targetAmount + targetFee)
 		if err != nil {
 			return nil, err
 		}
