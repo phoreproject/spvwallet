@@ -8,12 +8,12 @@ import (
 	"time"
 
 	"fmt"
-	"github.com/phoreproject/btcd/addrmgr"
-	"github.com/phoreproject/btcd/chaincfg"
-	"github.com/phoreproject/btcd/chaincfg/chainhash"
-	"github.com/phoreproject/btcd/connmgr"
-	"github.com/phoreproject/btcd/peer"
-	"github.com/phoreproject/btcd/wire"
+	"github.com/btcsuite/btcd/addrmgr"
+	"github.com/btcsuite/btcd/chaincfg"
+	"github.com/btcsuite/btcd/chaincfg/chainhash"
+	"github.com/btcsuite/btcd/connmgr"
+	"github.com/btcsuite/btcd/peer"
+	"github.com/btcsuite/btcd/wire"
 	"golang.org/x/net/proxy"
 )
 

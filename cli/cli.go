@@ -10,7 +10,7 @@ import (
 	"github.com/phoreproject/spvwallet"
 	"github.com/phoreproject/spvwallet/api"
 	"github.com/phoreproject/spvwallet/api/pb"
-	"github.com/phoreproject/btcd/wire"
+	"github.com/btcsuite/btcd/wire"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/jessevdk/go-flags"

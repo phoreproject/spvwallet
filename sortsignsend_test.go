@@ -3,9 +3,9 @@ package spvwallet
 import (
 	"bytes"
 	"github.com/phoreproject/wallet-interface"
-	"github.com/phoreproject/btcd/chaincfg"
-	"github.com/phoreproject/btcd/chaincfg/chainhash"
-	"github.com/phoreproject/btcd/wire"
+	"github.com/btcsuite/btcd/chaincfg"
+	"github.com/btcsuite/btcd/chaincfg/chainhash"
+	"github.com/btcsuite/btcd/wire"
 	"os"
 	"testing"
 )

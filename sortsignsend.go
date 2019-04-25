@@ -12,17 +12,17 @@ import (
 	"time"
 
 	"github.com/phoreproject/wallet-interface"
-	"github.com/phoreproject/btcd/blockchain"
-	"github.com/phoreproject/btcd/btcec"
-	"github.com/phoreproject/btcd/chaincfg/chainhash"
-	"github.com/phoreproject/btcd/txscript"
-	"github.com/phoreproject/btcd/wire"
-	btc "github.com/phoreproject/btcutil"
-	"github.com/phoreproject/btcutil/coinset"
-	hd "github.com/phoreproject/btcutil/hdkeychain"
-	"github.com/phoreproject/btcutil/txsort"
-	"github.com/phoreproject/btcwallet/wallet/txauthor"
-	"github.com/phoreproject/btcwallet/wallet/txrules"
+	"github.com/btcsuite/btcd/blockchain"
+	"github.com/btcsuite/btcd/btcec"
+	"github.com/btcsuite/btcd/chaincfg/chainhash"
+	"github.com/btcsuite/btcd/txscript"
+	"github.com/btcsuite/btcd/wire"
+	btc "github.com/btcsuite/btcutil"
+	"github.com/btcsuite/btcutil/coinset"
+	hd "github.com/btcsuite/btcutil/hdkeychain"
+	"github.com/btcsuite/btcutil/txsort"
+	"github.com/btcsuite/btcwallet/wallet/txauthor"
+	"github.com/btcsuite/btcwallet/wallet/txrules"
 )
 
 func (s *SPVWallet) Broadcast(tx *wire.MsgTx) error {

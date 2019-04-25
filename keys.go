@@ -2,8 +2,8 @@ package spvwallet
 
 import (
 	"github.com/btcsuite/goleveldb/leveldb/errors"
-	"github.com/phoreproject/btcd/chaincfg"
-	hd "github.com/phoreproject/btcutil/hdkeychain"
+	"github.com/btcsuite/btcd/chaincfg"
+	hd "github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/phoreproject/wallet-interface"
 )
 

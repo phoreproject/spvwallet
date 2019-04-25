@@ -1,10 +1,10 @@
 package spvwallet
 
 import (
-	"github.com/phoreproject/btcd/chaincfg"
-	"github.com/phoreproject/btcd/chaincfg/chainhash"
-	peerpkg "github.com/phoreproject/btcd/peer"
-	"github.com/phoreproject/btcd/wire"
+	"github.com/btcsuite/btcd/chaincfg"
+	"github.com/btcsuite/btcd/chaincfg/chainhash"
+	peerpkg "github.com/btcsuite/btcd/peer"
+	"github.com/btcsuite/btcd/wire"
 	"time"
 )
 

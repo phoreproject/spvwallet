@@ -9,7 +9,7 @@ package spvwallet
 import (
 	"bytes"
 	"encoding/hex"
-	"github.com/phoreproject/btcd/wire"
+	"github.com/btcsuite/btcd/wire"
 	"testing"
 )
 

@@ -6,7 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/phoreproject/wallet-interface"
-	"github.com/phoreproject/btcd/btcec"
+	"github.com/btcsuite/btcd/btcec"
 	"math/rand"
 	"strconv"
 	"sync"

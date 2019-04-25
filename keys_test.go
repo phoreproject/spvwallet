@@ -5,11 +5,11 @@ import (
 	"encoding/hex"
 	"testing"
 
-	"github.com/phoreproject/btcd/btcec"
-	"github.com/phoreproject/btcd/chaincfg"
-	"github.com/phoreproject/btcd/txscript"
-	"github.com/phoreproject/btcutil"
-	"github.com/phoreproject/btcutil/hdkeychain"
+	"github.com/btcsuite/btcd/btcec"
+	"github.com/btcsuite/btcd/chaincfg"
+	"github.com/btcsuite/btcd/txscript"
+	"github.com/btcsuite/btcutil"
+	"github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/phoreproject/wallet-interface"
 )
 
