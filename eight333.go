@@ -5,6 +5,7 @@ import (
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	peerpkg "github.com/btcsuite/btcd/peer"
 	"github.com/btcsuite/btcd/wire"
+	"net"
 	"time"
 )
 
@@ -179,10 +180,26 @@ func (ws *WireService) handleNewPeerMsg(peer *peerpkg.Peer) {
 // isSyncCandidate returns whether or not the peer is a candidate to consider
 // syncing from.
 func (ws *WireService) isSyncCandidate(peer *peerpkg.Peer) bool {
-	// The peer is not a candidate for sync if it's not a full node
-	nodeServices := peer.Services()
-	if nodeServices&wire.SFNodeNetwork != wire.SFNodeNetwork {
-		return false
+	// Typically a peer is not a candidate for sync if it's not a full node,
+	// however regression test is special in that the regression tool is
+	// not a full node and still needs to be considered a sync candidate.
+	if ws.params.Name == chaincfg.RegressionNetParams.Name {
+		// The peer is not a candidate if it's not coming from localhost
+		// or the hostname can't be determined for some reason.
+		host, _, err := net.SplitHostPort(peer.Addr())
+		if err != nil {
+			return false
+		}
+
+		if host != "127.0.0.1" && host != "localhost" {
+			return false
+		}
+	} else {
+		// The peer is not a candidate for sync if it's not a full node
+		nodeServices := peer.Services()
+		if nodeServices&wire.SFNodeNetwork != wire.SFNodeNetwork {
+			return false
+		}
 	}
 
 	// Candidate if all checks passed.
@@ -393,6 +410,17 @@ func (ws *WireService) handleMerkleBlockMsg(bmsg *merkleBlockMsg) {
 	header := merkleBlock.Header
 	blockHash := header.BlockHash()
 	if _, exists = state.requestedBlocks[blockHash]; !exists {
+		// The regression test intentionally sends some blocks twice
+		// to test duplicate block insertion fails.  Don't disconnect
+		// the peer or ignore the block when we're in regression test
+		// mode in this case so the chain code is actually fed the
+		// duplicate blocks.
+		if ws.params.Name != chaincfg.RegressionNetParams.Name {
+			log.Warningf("Got unrequested block %v from %s -- "+
+				"disconnecting", blockHash, peer.Addr())
+			peer.Disconnect()
+			return
+		}
 	}
 
 	// Remove block from request maps. Either chain will know about it and
