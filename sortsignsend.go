@@ -9,6 +9,9 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"time"
+
+	"github.com/phoreproject/wallet-interface"
 	"github.com/phoreproject/btcd/blockchain"
 	"github.com/phoreproject/btcd/btcec"
 	"github.com/phoreproject/btcd/chaincfg/chainhash"
@@ -20,8 +23,6 @@ import (
 	"github.com/phoreproject/btcutil/txsort"
 	"github.com/phoreproject/btcwallet/wallet/txauthor"
 	"github.com/phoreproject/btcwallet/wallet/txrules"
-	"github.com/phoreproject/wallet-interface"
-	"time"
 )
 
 func (s *SPVWallet) Broadcast(tx *wire.MsgTx) error {
@@ -92,7 +93,7 @@ func (w *SPVWallet) gatherCoins() map[coinset.Coin]*hd.ExtendedKey {
 	return m
 }
 
-func (w *SPVWallet) Spend(amount int64, addr btc.Address, feeLevel wallet.FeeLevel) (*chainhash.Hash, error) {
+func (w *SPVWallet) Spend(amount int64, addr btc.Address, feeLevel wallet.FeeLevel, referenceID string) (*chainhash.Hash, error) {
 	tx, err := w.buildTx(amount, addr, feeLevel, nil)
 	if err != nil {
 		return nil, err
